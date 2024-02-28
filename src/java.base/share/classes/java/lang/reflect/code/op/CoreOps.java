@@ -753,6 +753,121 @@ public final class CoreOps {
         }
     }
 
+    @OpDeclaration(AssertOp.NAME)
+    public static final class AssertOp extends OpWithDefinition {
+        public static final String NAME = "assert";
+        public final Block cond, detail;
+
+        public AssertOp(OpDefinition def) {
+            super(def);
+            var bodies = def.bodyDefinitions().stream().map(b -> b.build(this)).toList();
+            if (bodies.size() == 1 || bodies.size() == 2) {
+                this.cond = bodies.get(0).entryBlock();
+                this.detail = bodies.size() == 2 ? bodies.get(1).entryBlock() : null;
+            } else {
+                throw new IllegalArgumentException("Assert must have one or two bodies.");
+            }
+        }
+
+        public AssertOp(Block cond) {
+            super(NAME, List.of());
+            this.cond = cond;
+            this.detail = null;
+        }
+
+        public AssertOp(Block cond, Block detail) {
+            super(NAME, List.of());
+            this.cond = cond;
+            this.detail = detail;
+        }
+
+        public AssertOp(AssertOp that, CopyContext cc) {
+            super(that, cc);
+            this.cond = that.cond;
+            this.detail = that.detail;
+
+        }
+
+        @Override
+        public Op transform(CopyContext cc, OpTransformer ot) {
+            return new AssertOp(this, cc);
+        }
+
+        @Override
+        public TypeElement resultType() {
+            return JavaType.VOID;
+        }
+
+    }
+
+    /*
+    @OpDeclaration(MethodReferenceOp.NAME)
+    public static final class MethodReferenceOp extends Op implements ReflectiveOp {
+        public static final String NAME = "method.ref";
+        public static final String ATTRIBUTE_CALL_DESCRIPTOR = NAME + ".descriptor";
+
+        final MethodDesc refDescriptor;
+
+        final JavaType retType;
+
+        public static MethodReferenceOp create(OpDefinition def) {
+            MethodDesc methodRefDescriptor = def.attributes().removeDefaultAttribute(ATTRIBUTE_CALL_DESCRIPTOR,
+                    MethodDesc.class);
+
+            return new MethodReferenceOp(def, methodRefDescriptor);
+        }
+
+        MethodReferenceOp(OpDefinition def, MethodDesc refDescriptor) {
+            super(def);
+            //this.retType = refDescriptor.type();
+            this.refDescriptor = refDescriptor;
+        }
+
+        MethodReferenceOp(MethodReferenceOp that, CopyContext cc) {
+            super(that, cc);
+
+            this.refDescriptor = that.refDescriptor;
+        }
+
+        @Override
+        public MethodReferenceOp transform(CopyContext cc, OpTransformer ot) {
+            return new MethodReferenceOp(this, cc);
+        }
+
+        MethodReferenceOp(MethodDesc refDescriptor, JavaType functionalInterface) {
+            super(NAME, List.of());
+            this.retType = functionalInterface;
+            this.refDescriptor = refDescriptor;
+        }
+
+        MethodReferenceOp(MethodDesc refDescriptor, JavaType functionalInterface, Value receiver) {
+            super(NAME, List.of(receiver));
+            this.retType = functionalInterface;
+            this.refDescriptor = refDescriptor;
+        }
+
+        @Override
+        public Map<String, Object> attributes() {
+            HashMap<String, Object> m = new HashMap<>(super.attributes());
+            m.put("", refDescriptor);
+            return Collections.unmodifiableMap(m);
+        }
+
+        @Override
+        public TypeElement resultType() {
+            return retType;
+        }
+
+        public JavaType functionalInterface() {
+            return retType;
+        }
+
+        public MethodDesc refDescriptor() {
+            return refDescriptor;
+        }
+    }
+     */
+
     /**
      * The terminating return operation, that can model the Java language return statement.
      * <p>
@@ -3120,6 +3235,14 @@ public final class CoreOps {
      */
     public static ThrowOp _throw(Value exceptionValue) {
         return new ThrowOp(exceptionValue);
+    }
+
+    public static AssertOp _assert(Block c) {
+        return new AssertOp(c);
+    }
+
+    public static AssertOp _assert(Block c, Block d) {
+        return new AssertOp(c, d);
     }
 
     /**
